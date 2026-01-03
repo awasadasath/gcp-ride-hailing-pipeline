@@ -186,19 +186,31 @@ A Python-based **Cloud Run function (2nd Gen)** serves as the intelligent middle
 3.  **Anomaly Detection:** Parses the `alert_trigger` field injected by the simulator and triggers external webhooks.
 
 ### 🚨 3. Real-time Alerting (Discord Integration)
-To enable proactive monitoring, the Cloud Function sends formatted alerts directly to the Operations Channel.
+To enable proactive monitoring, the Cloud Function sends formatted alerts directly to the Operations Channel with color-coded severity.
 
 ![Discord Alert Example](images/discord_alert.png)
 *(Screenshot: Real-time alerts differentiating between Data Quality Errors and Business Events)*
 
-* **🔴 Critical Alerts:** Triggered by `DQ: MISSING` or `DQ: SHORT`. The payload is dumped into the chat for immediate debugging by Data Engineers.
-* **🔵 Info Alerts:** Triggered by `RUSH HOUR` or `STORM STARTED`. Notifies Business Analysts of incoming demand spikes.
+* **🔵 Blue (Info):** Triggered by `FREEZE STARTED`. Notifies distinct weather changes.
+* **🟠 Orange (Warning):** Triggered by `STORM STARTED`. Warns of potential service disruptions.
+* **🟡 Yellow (Data Quality):** Triggered by `DQ: MISSING` or `DQ: SHORT`. Flags anomalies for data engineering review.
+* **🔴 Red (Critical):** Triggered when `Surge Multiplier >= 2.0`. Alerts business teams of high-demand events.
 
 ```python
 # Alert Logic Snippet
-if ride_data.get('alert_trigger'):
-    # Differentiate color based on urgency
-    color = 15158332 if "DQ:" in trigger else 3447003 # Red vs Blue
+if ride_data.get('alert_trigger') or ride_data.get('surge_multiplier', 1.0) >= 2.0:
+    trigger = ride_data.get('alert_trigger', 'High Surge')
+    
+    # Map severity to Discord Colors
+    if "FREEZE" in trigger:
+        color = 3447003   # 🔵 Blue
+    elif "STORM" in trigger:
+        color = 15105570  # 🟠 Orange
+    elif "DQ:" in trigger:
+        color = 16776960  # 🟡 Yellow
+    else:
+        color = 15158332  # 🔴 Red (Critical/High Surge)
+
     send_discord_webhook(message=trigger, payload=ride_data, color=color)
 ```
 ---
