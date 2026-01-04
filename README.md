@@ -77,26 +77,37 @@ This project leverages a fully serverless Google Cloud stack, orchestrating data
 | **Alerting** | **Discord Webhook** | Real-time notification channel for critical events (`RUSH HOUR`, `STORM`) and data anomalies (`MISSING DATA`). |
 
 ---
-## 4. 💾 Dataset & Schema Design
+## 4. 💾 Dataset Strategy & Schema Design
 
-### Source Data
-The project utilizes the **[Uber and Lyft Dataset Boston, MA](https://www.kaggle.com/datasets/brllrb/uber-and-lyft-dataset-boston-ma)** from Kaggle.
-* **Dataset Size:** ~693,071 rows with 57 columns.
-* **Scope:** Ride-hailing data covers various locations in Boston (e.g., Back Bay, Fenway, North Station).
-* **Preprocessing:**
-    * **Batch Layer:** Cleaned raw CSV by removing rows with null prices to create a high-quality training set.
-    * **Streaming Layer:** The simulator streams critical features (Source, Destination, Cab Type, Weather) but **excludes the price** to simulate a prediction scenario.
+To demonstrate a complete MLOps lifecycle, this project strictly separates **Historical Data** (used for model training) from **Live Simulation Data** (used for real-time inference).
 
-### BigQuery Schema
-Data is managed in BigQuery through two primary tables: one for handling real-time streaming ingestion and another for storing historical batch data for model training.
+| Data Role | Source | Purpose | Destination |
+| :--- | :--- | :--- | :--- |
+| **1. Training Set** (Static) | **Kaggle CSV** (Historical) | Ground Truth used to **Train** the XGBoost Model. | `uber_data.training_data` (Batch Table) |
+| **2. Inference Set** (Dynamic) | **Python Simulator** (Live) | Unseen data used to **Test** the model via Dashboard. | `uber_data.simulation_rides` (Stream Table) |
 
-#### 1. Streaming Table (`simulation_rides`)
+### 4.1 Source Data (The "Textbook")
+The project utilizes the **[Uber and Lyft Dataset Boston, MA](https://www.kaggle.com/datasets/brllrb/uber-and-lyft-dataset-boston-ma)** from Kaggle (~693k rows).
+* **Preprocessing:** Rows with null prices were cleaned and stored in **Google Cloud Storage (GCS)**.
+* **Role:** This dataset acts as the "Textbook" for the model to learn pricing patterns based on Time, Distance, and Weather features.
+
+### 4.2 Streaming Data (The "Exam")
+The **Dockerized Simulator** generates *new, unseen* ride requests that mimic the statistical properties of the Kaggle dataset but occur in **Real-time**.
+* **The Twist:** These streaming records **do not have a price**.
+* **The Goal:** The pipeline must use the pre-trained XGBoost model to **predict the price** on the fly as data arrives in BigQuery.
+
+---
+
+### 4.3 BigQuery Schema
+Data is managed in BigQuery through two primary tables mirroring the strategy above.
+
+#### A. Streaming Table (`simulation_rides`)
 This table ingests live data from the Docker Simulator via Pub/Sub. It contains the `alert_trigger` field for monitoring but has `NULL` prices (to be predicted).
 
 | Field Name | Type | Description |
 | :--- | :--- | :--- |
 | `ride_id` | STRING | **Primary Key** used for **De-duplication** (Ensures exactly-once processing). |
-| `timestamp` | TIMESTAMP | Event time of the ride request. |
+| `timestamp` | TIMESTAMP | Event time (Real-time). |
 | `cab_type` | STRING | Service provider (`Uber` or `Lyft`). |
 | `name` | STRING | Specific car class (e.g., `UberXL`, `Lux Black`). |
 | `source` | STRING | Pickup location (e.g., `Fenway`, `North Station`). |
@@ -106,15 +117,15 @@ This table ingests live data from the Docker Simulator via Pub/Sub. It contains 
 | `temperature` | FLOAT | Temperature in Fahrenheit. |
 | `precipIntensity` | FLOAT | Rain/Snow intensity. |
 | `alert_trigger` | STRING | Tags for anomalies (e.g., `DQ: SHORT`, `RUSH HOUR`). |
-| `price` | FLOAT | Placeholder for prediction (Populated by ML inference). |
+| `price` | FLOAT | **Placeholder** (Populated by ML inference). |
 
-#### 2. Batch Table (`realtime_rides`)
+#### B. Batch Table (`realtime_rides`)
 This table stores the historical dataset loaded from GCS. It includes the actual `price` and is used as the **Ground Truth** for training the XGBoost model.
 
 | Field Name | Type | Description |
 | :--- | :--- | :--- |
 | `id` | STRING | Unique identifier for the historical ride. |
-| `timestamp` | TIMESTAMP | Event time of the ride. |
+| `timestamp` | TIMESTAMP | Event time (Historical). |
 | `cab_type` | STRING | Service provider (`Uber` or `Lyft`). |
 | `name` | STRING | Specific car class (e.g., `UberXL`). |
 | `price` | FLOAT | **Target Variable** (Actual fare used for training). |
