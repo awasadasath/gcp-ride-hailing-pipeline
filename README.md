@@ -315,6 +315,17 @@ The Cloud Function acts as a dispatcher, parsing the `alert_trigger` text and as
 | **3** | `DQ` | 🚫 DATA QUALITY ISSUE | 🟡 Yellow |
 | **4** | Surge >= 2.0 | 🚨 HIGH SURGE DETECTED | 🔴 Red |
 
+### 🚨 Real-time Alerting Gallery
+The system categorizes events into 4 severity levels. Below are actual screenshots captured from the Discord channel during the simulation.
+
+| **1. CRITICAL: High Surge** 🔴 | **2. DATA QUALITY: Anomaly** 🟡 |
+| :---: | :---: |
+| **Trigger:** `Surge ≥ 2.0` + `RUSH HOUR`<br>Alerts business teams of revenue opportunities. | **Trigger:** `DQ: MISSING` / `DQ: SHORT`<br>Flags corrupted data for engineering review. |
+| ![High Surge Alert](images/discord_critical.png) | ![DQ Alert](images/discord_dq.png) |
+| | |
+| **3. WEATHER: Storm** 🟠 | **4. WEATHER: Freeze** 🔵 |
+| **Trigger:** `STORM STARTED`<br>Warns of heavy rain and moderate temp drops. | **Trigger:** `FREEZE STARTED`<br>Warns of icy conditions and extreme temp drops. |
+| ![Storm Alert](images/discord_storm.png) | ![Freeze Alert](images/discord_freeze.png) |
 
 ---
 ## 📊 9. Dashboard & Business Insights
