@@ -83,7 +83,7 @@ To demonstrate a complete MLOps lifecycle, this project strictly separates **His
 
 | Data Role | Source | Purpose | Destination |
 | :--- | :--- | :--- | :--- |
-| **1. Training Set** (Static) | **Kaggle CSV** (Historical) | Ground Truth used to **Train** the XGBoost Model. | `uber_data.training_data` (Batch Table) |
+| **1. Training Set** (Static) | **Kaggle CSV** (Historical) | Ground Truth used to **Train** the XGBoost Model. | `uber_data.realtime_rides` (Batch Table) |
 | **2. Inference Set** (Dynamic) | **Python Simulator** (Live) | Unseen data used to **Test** the model via Dashboard. | `uber_data.simulation_rides` (Stream Table) |
 
 ### 4.1 Source Data (The "Textbook")
@@ -95,8 +95,6 @@ The project utilizes the **[Uber and Lyft Dataset Boston, MA](https://www.kaggle
 The **Dockerized Simulator** generates *new, unseen* ride requests that mimic the statistical properties of the Kaggle dataset but occur in **Real-time**.
 * **The Twist:** These streaming records **do not have a price**.
 * **The Goal:** The pipeline must use the pre-trained XGBoost model to **predict the price** on the fly as data arrives in BigQuery.
-
----
 
 ### 4.3 BigQuery Schema
 Data is managed in BigQuery through two primary tables mirroring the strategy above.
