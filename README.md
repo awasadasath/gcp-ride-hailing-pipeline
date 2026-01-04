@@ -50,12 +50,12 @@ This pipeline is designed to handle high-throughput ride data using a **Lambda A
 ### 3. Batch Layer (Model Training)
 * **Storage:** Historical data (containing actual prices) is archived in **Google Cloud Storage (GCS)**.
 * **Training:** We load this data into BigQuery to train:
-    * **XGBoost Regressor:** Trains a pricing model using distance, surge, temperature, and the geospatial zones (cluster_id) derived from the K-Means model and more as key features.
+    * **XGBoost Regressor:** Trains a pricing model using distance, surge, temperature, the geospatial zones (cluster_id) derived from the K-Means model and more as key features.
     * **K-Means Clustering:** To group coordinates into 6 distinct spatial zones across the city.
 
 ### 4. Serving & Visualization
-* **Inference:** The trained XGBoost model predicts the `fare_price` for every incoming real-time record.
-* **Dashboard:** **Looker Studio** joins the real-time stream with model predictions to visualize **Actual Revenue vs. Predicted Price** and monitor system health.
+* **Inference:** The trained XGBoost model predicts the `predicted_price` for every incoming real-time record.
+* **Dashboard:** **Looker Studio** joins the real-time stream with model predictions to visualize **Actual Price vs. Predicted Price** , monitor **Data Quality**, and track **Geospatial Zones**.
 
 ---
 
@@ -68,7 +68,8 @@ This project leverages a fully serverless Google Cloud stack, orchestrating data
 | **Infrastructure** | ![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat&logo=docker&logoColor=white) | Containerized environment for the Python Simulator to ensure reproducible chaos experiments. |
 | **Cloud Platform** | ![GCP](https://img.shields.io/badge/-Google_Cloud-4285F4?style=flat&logo=google-cloud&logoColor=white) | Primary ecosystem for all data engineering and analytics services. |
 | **Streaming** | **Cloud Pub/Sub** | Handles high-throughput events. Includes a **Dead Letter Topic** (`uber-ride-dead-letter`) to catch failed messages. |
-| **Compute** | **Cloud Run functions** | Serverless functions (Gen 2) for payload validation, parsing, and BigQuery insertion. |
+| **Compute** | **Cloud Run functions** | Serverless functions for payload validation, parsing, and BigQuery insertion. |
+| **Storage (Data Lake)** | **Cloud Storage (GCS)** | Stores the raw historical CSV dataset (`693k rows`) used to train the XGBoost & K-Means models. |
 | **Data Warehouse** | **BigQuery** | Petabyte-scale data warehouse for storing raw streams (`simulation_rides`) and 600K+ historical records. |
 | **Machine Learning** | **BigQuery ML** | **XGBoost** (Regression) for fare prediction (evaluated via MAE/MAPE) and **K-Means** for spatial clustering (Zones 1-6). |
 | **Language** | **Python 3.9+** | Core logic for the simulator, random anomaly generation, and Cloud Run function code. |
@@ -87,7 +88,10 @@ The project utilizes the **[Uber and Lyft Dataset Boston, MA](https://www.kaggle
     * **Streaming Layer:** The simulator streams critical features (Source, Destination, Cab Type, Weather) but **excludes the price** to simulate a prediction scenario.
 
 ### BigQuery Schema
-Data lands in BigQuery with the following unified schema.
+Data is managed in BigQuery through two primary tables: one for handling real-time streaming ingestion and another for storing historical batch data for model training.
+
+#### 1. Streaming Table (`simulation_rides`)
+This table ingests live data from the Docker Simulator via Pub/Sub. It contains the `alert_trigger` field for monitoring but has `NULL` prices (to be predicted).
 
 | Field Name | Type | Description |
 | :--- | :--- | :--- |
@@ -102,9 +106,23 @@ Data lands in BigQuery with the following unified schema.
 | `temperature` | FLOAT | Temperature in Fahrenheit. |
 | `precipIntensity` | FLOAT | Rain/Snow intensity. |
 | `alert_trigger` | STRING | Tags for anomalies (e.g., `DQ: SHORT`, `RUSH HOUR`). |
-| `price` | FLOAT | Actual fare price (Null for stream, populated for batch). |
+| `price` | FLOAT | Placeholder for prediction (Populated by ML inference). |
 
----
+#### 2. Batch Table (`realtime_rides`)
+This table stores the historical dataset loaded from GCS. It includes the actual `price` and is used as the **Ground Truth** for training the XGBoost model.
+
+| Field Name | Type | Description |
+| :--- | :--- | :--- |
+| `id` | STRING | Unique identifier for the historical ride. |
+| `timestamp` | TIMESTAMP | Event time of the ride. |
+| `cab_type` | STRING | Service provider (`Uber` or `Lyft`). |
+| `name` | STRING | Specific car class (e.g., `UberXL`). |
+| `price` | FLOAT | **Target Variable** (Actual fare used for training). |
+| `distance` | FLOAT | Distance in miles. |
+| `surge_multiplier` | FLOAT | Pricing multiplier based on demand. |
+| `source` | STRING | Pickup location. |
+| `destination` | STRING | Drop-off location. |
+| `temperature` | FLOAT | Temperature in Fahrenheit. |
 
 ## 🧬 5. Simulation Logic & Chaos Engineering
 
@@ -162,8 +180,8 @@ The simulator intentionally "breaks" data to test the pipeline's **Resilience** 
 | Anomaly Type | Probability | Condition / Logic | System Behavior |
 | :--- | :--- | :--- | :--- |
 | **Missing Critical Data** | **2%** | Randomly forces `surge_multiplier` and `distance` to `NULL`. | Simulates app crashes or network timeouts. Triggers `DQ: MISSING DATA`. |
-| **GPS Drift (Short)** | Variable | Generated distance ≤ 0.2 miles. | Simulates GPS locking errors where pickup/dropoff are nearly identical. Triggers `DQ: SHORT`. |
-| **GPS Drift (Long)** | Variable | Generated distance ≥ 6.0 miles. | Simulates GPS jumps or impossible speeds for inner-city routes. Triggers `DQ: LONG`. |
+| **GPS Drift (Short)** | **Weighted Dist.** | Generated distance ≤ 0.2 miles. | Simulates GPS locking errors where pickup/dropoff are nearly identical. Triggers `DQ: SHORT`. |
+| **GPS Drift (Long)** | **Weighted Dist.** | Generated distance ≥ 6.0 miles. | Simulates GPS jumps or impossible speeds for inner-city routes. Triggers `DQ: LONG`. |
 | **Alert Tagging** | **Automatic** | Logic appends these issues into an `alert_trigger` string. | Example Payload: `"alert_trigger": "DQ: MISSING DATA, 🚗 RUSH HOUR"` |
 
 ---
@@ -174,11 +192,11 @@ The ingestion backbone acts as a shock absorber between the high-throughput simu
 
 ### 📡 1. Decoupling with Pub/Sub
 I implemented **Google Cloud Pub/Sub** to decouple the simulator from the processing layer.
-* **Role:** Acts as an asynchronous buffer that absorbs traffic spikes (e.g., during "Rush Hour" simulations).
+* **Role:** Acts as a **message queue** buffer that absorbs traffic spikes (e.g., during "Rush Hour" simulations).
 * **Reliability:** Configured with a **Dead Letter Queue (DLQ)**. If a message is malformed or fails processing, it is routed to `uber-ride-dead-letter` guarantees **At-Least-Once Delivery**.
 
 ### 🛡️ 2. The Quality Gate (Cloud Run functions)
-A Python-based **Cloud Run function (2nd Gen)** serves as the intelligent middleware. It validates data *before* it enters BigQuery.
+A Python-based **Cloud Run function** serves as the intelligent middleware. It validates data *before* it enters BigQuery.
 
 **Key Responsibilities:**
 1.  **Schema Validation:** Ensures incoming JSON payloads contain essential fields.
@@ -222,7 +240,7 @@ To build accurate predictive models, the system employs a **Hybrid Approach**: u
 
 ### 🗄️ Batch Layer: From GCS to BigQuery
 Before real-time inference can happen, the model needs to learn from history.
-1.  **Data Lake (GCS):** The raw historical CSV (`693k rows`) containing actual prices is stored in a GCS bucket (`gs://uber-data-lake/historical/`).
+1.  **Data Lake (GCS):** The raw historical CSV (`693k rows`) containing actual prices is stored in a GCS bucket (`gs://uber-data-lake`).
 2.  **Data Loading:** This data is loaded into BigQuery to create the foundational **Training Dataset**.
 3.  **Benefit:** This separation ensures that our model is trained on verified, high-quality historical data.
 
@@ -235,7 +253,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 ### 🔮 Model 1: Fare Price Prediction (XGBoost)
 * **Algorithm:** `BOOSTED_TREE_REGRESSOR` (XGBoost).
 * **Features:** `distance`, `surge_multiplier`, `cab_type`, `name` (Car Class), `temperature`, `precipIntensity`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
-* **Performance:** **MAE: 1.17** | **MAPE: 6.78%** (Evaluated on the unseen test set).
+* **Performance:** **MAE: 1.17** | **MAPE: 6.78%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
 
 ### 📍 Model 2: Geospatial Clustering (K-Means)
 * **Objective:** Dynamically segment Boston neighborhoods into 6 operational zones (`cluster_id`) based on demand density.
@@ -245,11 +263,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 We use standard SQL to bridge the gap between GCS data, feature extraction, and ML training:
 
 ```sql
--- 1. Load Historical Data from GCS (One-time Setup)
-LOAD DATA OVERWRITE `uber_data.batch_historical_data`
-FROM FILES (format = 'CSV', uris = ['gs://uber-data-lake/historical/boston_rides_2018.csv']);
-
--- 2. Train XGBoost Model (Hybrid Features)
+-- Train XGBoost Model (Hybrid Features)
 CREATE OR REPLACE MODEL `uber_data.price_prediction_model`
 OPTIONS(model_type='BOOSTED_TREE_REGRESSOR', input_label_cols=['price']) AS
 SELECT
@@ -289,7 +303,6 @@ END as dq_status
 | DQ Status | Root Cause | Result in Dashboard |
 | :--- | :--- | :--- |
 | **Error: Missing Data 🚫** | Chaos Monkey (2% nulls) | Price: `NULL` (Graph Gap) |
-| **Error: Zero Distance 🚫** | Protection Logic | Price: `NULL` (Prevent Outliers) |
 | **Warning: Data Quality ⚠️** | Random GPS Drift (≤ 0.2 mi) | Flagged for review. |
 
 ### 🔔 2. Discord Alert Priority Mapping
