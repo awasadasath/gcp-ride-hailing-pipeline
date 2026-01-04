@@ -41,16 +41,16 @@ This pipeline is designed to handle high-throughput ride data using a **Lambda A
 
 ### 2. Speed Layer (Real-time Ingestion)
 * **Ingestion:** Ride events are streamed to **Pub/Sub**.
-* **Processing:** **Cloud Run functions** (Gen 2) validate the payload and insert it into **BigQuery** immediately.
+* **Processing:** **Cloud Run functions** validate the payload and insert it into **BigQuery** immediately.
 * **Error Handling (DLQ):** To ensure zero data loss, any message that fails processing (e.g., malformed JSON) is automatically routed to a **Dead Letter Topic** (`uber-ride-dead-letter`) for later inspection.
 * **Monitoring & Alerting:** The function parses the `alert_trigger` field and sends **Discord Webhooks** for:
     * **⛔ Data Quality Errors:** `DQ: MISSING DATA` (Null inputs), `DQ: SHORT` (GPS Errors).
-    * **⚡ Business Events:** `RUSH HOUR`, `STORM STARTED`, `HOT ZONE` (High Demand).
+    * **⚡ Critical Events:** `STORM STARTED`, `FREEZE STARTED`, and **High Demand Surges** (triggered by `RUSH HOUR` or `HOT ZONE`).
 
 ### 3. Batch Layer (Model Training)
 * **Storage:** Historical data (containing actual prices) is archived in **Google Cloud Storage (GCS)**.
 * **Training:** We load this data into BigQuery to train:
-    * **XGBoost Regressor:** To learn the pricing model based on features like distance, surge, and weather.
+    * **XGBoost Regressor:** Trains a pricing model using distance, surge, temperature, and the geospatial zones (cluster_id) derived from the K-Means model and more as key features.
     * **K-Means Clustering:** To group coordinates into 6 distinct spatial zones across the city.
 
 ### 4. Serving & Visualization
@@ -198,20 +198,21 @@ To enable proactive monitoring, the Cloud Function sends formatted alerts direct
 
 ```python
 # Alert Logic Snippet
-if ride_data.get('alert_trigger') or ride_data.get('surge_multiplier', 1.0) >= 2.0:
-    trigger = ride_data.get('alert_trigger', 'High Surge')
-    
-    # Map severity to Discord Colors
-    if "FREEZE" in trigger:
-        color = 3447003   # 🔵 Blue
-    elif "STORM" in trigger:
-        color = 15105570  # 🟠 Orange
-    elif "DQ:" in trigger:
-        color = 16776960  # 🟡 Yellow
-    else:
-        color = 15158332  # 🔴 Red (Critical/High Surge)
+# 1. Check if Surge is critical (>= 2.0)
+is_high_surge = ride_data.get('surge_multiplier', 1.0) >= 2.0
 
-    send_discord_webhook(message=trigger, payload=ride_data, color=color)
+# 2. Check for specific Anomalies
+alerts = ride_data.get('alert_trigger', '')
+is_anomaly = any(x in alerts for x in ['DQ', 'STORM', 'FREEZE'])
+
+if is_high_surge or is_anomaly:
+    # Determine Severity Color
+    if "FREEZE" in alerts:   color = 3447003   # 🔵 Blue
+    elif "STORM" in alerts:  color = 15105570  # 🟠 Orange
+    elif "DQ" in alerts:     color = 16776960  # 🟡 Yellow
+    else:                    color = 15158332  # 🔴 Red (High Surge / Rush Hour)
+
+    send_discord_webhook(payload=ride_data, color=color)
 ```
 ---
 
@@ -233,7 +234,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 
 ### 🔮 Model 1: Fare Price Prediction (XGBoost)
 * **Algorithm:** `BOOSTED_TREE_REGRESSOR` (XGBoost).
-* **Features:** `distance`, `surge_multiplier`, `cab_type`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
+* **Features:** `distance`, `surge_multiplier`, `cab_type`, `name` (Car Class), `temperature`, `precipIntensity`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
 * **Performance:** **MAE: 1.17** | **MAPE: 6.78%** (Evaluated on the unseen test set).
 
 ### 📍 Model 2: Geospatial Clustering (K-Means)
@@ -248,7 +249,7 @@ We use standard SQL to bridge the gap between GCS data, feature extraction, and 
 LOAD DATA OVERWRITE `uber_data.batch_historical_data`
 FROM FILES (format = 'CSV', uris = ['gs://uber-data-lake/historical/boston_rides_2018.csv']);
 
--- 2. Train XGBoost Model with Feature Engineering
+-- 2. Train XGBoost Model (Hybrid Features)
 CREATE OR REPLACE MODEL `uber_data.price_prediction_model`
 OPTIONS(model_type='BOOSTED_TREE_REGRESSOR', input_label_cols=['price']) AS
 SELECT
@@ -256,12 +257,15 @@ SELECT
   distance,
   surge_multiplier,
   cab_type,
-  EXTRACT(HOUR FROM timestamp) as hour_of_day,       -- Feature Engineering
-  EXTRACT(DAYOFWEEK FROM timestamp) as day_of_week   -- Feature Engineering
+  name,                -- Added Car Class
+  temperature,         -- Added Weather Feature
+  cluster_id,          -- Feature from K-Means Model
+  EXTRACT(HOUR FROM timestamp) as hour_of_day,
+  EXTRACT(DAYOFWEEK FROM timestamp) as day_of_week
 FROM
   `uber_data.training_data`
 WHERE
-  timestamp < '2018-12-14'; -- Time-based Split Strategy
+  timestamp < '2018-12-14';
 ```
 ---
 
@@ -276,6 +280,7 @@ Since raw errors (like Nulls or Zeros) are hard to visualize, I implemented a tr
 CASE 
     WHEN d.distance IS NULL OR d.surge_multiplier IS NULL THEN 'Error: Missing Data 🚫'
     WHEN d.distance <= 0 THEN 'Error: Zero Distance 🚫'
+    WHEN d.surge_multiplier >= 3.0 THEN 'Warning: Max Surge 📈'
     WHEN d.alert_trigger LIKE '%DQ: SHORT%' THEN 'Warning: Data Quality ⚠️'
     ELSE 'Pass'
 END as dq_status
