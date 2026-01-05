@@ -133,6 +133,18 @@ This table stores the historical dataset loaded from GCS. It includes the actual
 | `destination` | STRING | Drop-off location. |
 | `temperature` | FLOAT | Temperature in Fahrenheit. |
 
+### 4.4 Data Standardization (Service Levels)
+To simplify analysis in the dashboard, raw vehicle types (`name`) were mapped into standardized **Service Categories** using SQL logic. This allows for clearer price comparison between service tiers (e.g., Budget vs. Luxury).
+
+| Service Category | Raw Vehicle Types (Uber & Lyft) | Description |
+| :--- | :--- | :--- |
+| **💎 Super Luxury** | `Black SUV`, `Lux Black XL` | Top-tier pricing, large premium SUVs. |
+| **🤵 Luxury Sedan** | `Black`, `Lux Black` | Premium black car service. |
+| **🌟 Premium Entry** | `Lux` | Entry-level premium vehicles. |
+| **🚙 Regular XL** | `UberXL`, `Lyft XL` | High-capacity standard vehicles (6 seats). |
+| **🚗 Standard Ride** | `UberX`, `Lyft`, `WAV` | Standard economy rides (Highest Volume). |
+| **💰 Budget Shared** | `UberPool`, `Shared` | Shared rides with lowest pricing tier. |
+
 ## 🧬 5. Simulation Logic & Chaos Engineering
 
 To simulate a realistic production environment, I engineered a **State-Aware Python Simulator** running in Docker.
