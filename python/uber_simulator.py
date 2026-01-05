@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from google.cloud import pubsub_v1
 
-# CONFIGURATION 
+# CONFIGURATION
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "key.json" 
 project_id = "uber-project-482219"  
 topic_id = "uber-ride-topic"    
@@ -36,18 +36,19 @@ current_weather_mode = "CLEAR"
 weather_duration = 0           
 current_temp = 42.0 
 
-print(f"🚗 Starting Uber Simulator (Real-time Mode)...")
+print(f"🚗 Starting Uber Simulator...")
 
 # COLUMN WIDTHS
-W_TIME = 20
-W_WEATHER = 11
-W_SURGE = 6     
-W_CAR = 13      
-W_LOC = 24      
-line_len = 130
+W_TIME = 19      
+W_WEATHER = 12   
+W_SURGE = 6      
+W_CAR = 14       
+W_DIST = 9       
+W_LOC = 22       
+line_len = 145   
 
 print("-" * line_len)
-print(f"{'TIMESTAMP':<{W_TIME}} | {'WEATHER':<{W_WEATHER}} | {'SURGE':<{W_SURGE}} | {'CAR TYPE':<{W_CAR}} | {'SOURCE':<{W_LOC}} | {'DESTINATION':<{W_LOC}} | ALERTS")
+print(f"{'TIMESTAMP':<{W_TIME}} | {'WEATHER':<{W_WEATHER}} | {'SURGE':<{W_SURGE}} | {'CAR TYPE':<{W_CAR}} | {'DIST':<{W_DIST}} | {'SOURCE':<{W_LOC}} | {'DESTINATION':<{W_LOC}} | ALERTS")
 print("-" * line_len)
 
 try:
@@ -109,7 +110,6 @@ try:
         hour = current_sim_time.hour
         weekday = current_sim_time.weekday()
         
-        # Rush Hour Logic
         is_weekday = weekday < 5
         is_morning_rush = (7 <= hour <= 9)
         is_evening_rush = (17 <= hour <= 19)
@@ -178,32 +178,33 @@ try:
         publisher.publish(topic_path, json.dumps(data).encode("utf-8"))
 
         # 5. Log Output
-        log_time = current_sim_time.strftime('%H:%M:%S')
-        c_weather = ""
+        log_time = current_sim_time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        icon = ""
+        text = ""
         c_surge = ""
+        c_dist = ""
         
         if dist_val is None: 
-            weather_raw = "🚫 N/A"
+            icon = "🚫"
+            text = "N/A"
             c_surge = "N/A"
+            c_dist = "N/A"
         else:
-            status_icon = ""
-            if precip > 0 and current_temp <= 32:
-                status_icon = "❄️"
-            elif precip > 0:
-                status_icon = "🌧️"
+            if precip > 0:
+                icon = "❄️" if current_temp <= 32 else "🌧️"
             else:
-                status_icon = "☀️"
+                icon = "☀️"
             
-            weather_raw = f"{status_icon} {current_temp:.1f}°F"
+            text = f"{current_temp:.1f}°F"
             c_surge = f"x{final_surge:.2f}"
+            c_dist = f"{dist_val} mi"
 
-        c_weather = f"{weather_raw:<{W_WEATHER}}"  
-        
         c_src = source[:W_LOC]
         c_dst = destination[:W_LOC]
         alert_display = alert_string if alert_string else ""
 
-        print(f"{log_time:<{W_TIME}} | {c_weather} | {c_surge:<{W_SURGE}} | {name:<{W_CAR}} | {c_src:<{W_LOC}} | {c_dst:<{W_LOC}} | {alert_display}")
+        print(f"{log_time:<{W_TIME}} | {icon} {text:<9} | {c_surge:<{W_SURGE}} | {name:<{W_CAR}} | {c_dist:<{W_DIST}} | {c_src:<{W_LOC}} | {c_dst:<{W_LOC}} | {alert_display}")
         
         time.sleep(random.uniform(0.5, 2))
 

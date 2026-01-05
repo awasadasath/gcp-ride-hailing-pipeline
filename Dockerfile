@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 COPY requirements.txt .
 COPY key.json .
-COPY uber_simulator.py .
+COPY python/uber_simulator.py .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
