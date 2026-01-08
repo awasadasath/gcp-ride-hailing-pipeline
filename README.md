@@ -205,6 +205,12 @@ The simulator intentionally "breaks" data to test the pipeline's **Resilience** 
 | **GPS Drift (Long)** | **Weighted Dist.** | Generated distance ≥ 6.0 miles. | Simulates GPS jumps or impossible speeds for inner-city routes. Triggers `DQ: LONG`. |
 | **Alert Tagging** | **Automatic** | Logic appends these issues into an `alert_trigger` string. | Example Payload: `"alert_trigger": "DQ: MISSING DATA, 🚗 RUSH HOUR"` |
 
+### 🖥️ Simulator Output Preview
+This provides a real-time view of the "Chaos Generator" in action. The console log confirms the injection of **Random Noise**, **Weather States** (Rain/Freeze), and **Anomalies** before the data is streamed to Pub/Sub.
+
+![Python Simulator Console Output](images/simulator_console.jpg)
+*(Figure: CLI output showing the stream of ride events with colored status icons and alert tags)*
+
 ---
 
 ## ☁️ 6. Event Streaming & Serverless Ingestion
