@@ -353,6 +353,15 @@ The system categorizes events into 4 severity levels. Below are actual screensho
 
 The final output of the pipeline is visualized in **Looker Studio**, aggregating data from a **3-day continuous simulation run** to capture multiple rush hour cycles and weather transitions. It offers three distinct views to serve different stakeholders (Operations, Data Scientists, and Data Engineers).
 
+### 🎛️ Interactive Global Controls
+To ensure a unified analytical experience, every dashboard view features a consistent **Top Navigation Bar** equipped with three global slicers, allowing users to slice and dice the data dynamically:
+
+* **📅 Date Selector:** Enables temporal analysis (e.g., focusing on a specific "Rush Hour" window or a full 3-day trend).
+* **🚘 Car Tier Group:** Filters data by service level (e.g., drilling down into `Super Luxury` performance vs. `Standard Ride` volume).
+* **📍 Source Location:** Isolates specific neighborhoods (e.g., "Show me only trips starting in `Financial District`") to analyze localized demand.
+
+---
+
 ### 🏙️ A. Real-time Operation Command Center
 *Designed for Dispatchers & Business Analysts to monitor live city status.*
 
