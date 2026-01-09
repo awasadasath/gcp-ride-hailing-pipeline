@@ -93,7 +93,7 @@ This project leverages a fully serverless Google Cloud stack, orchestrating data
 | **Storage (Data Lake)** | **Cloud Storage (GCS)** | Stores the raw historical CSV dataset (`693k rows`) used to train the XGBoost & K-Means models. |
 | **Data Warehouse** | **BigQuery** | Petabyte-scale data warehouse for storing raw streams (`simulation_rides`) and 600K+ historical records. |
 | **Machine Learning** | **BigQuery ML** | **XGBoost** (Regression) for fare prediction (evaluated via MAE/MAPE) and **K-Means** for spatial clustering (Zones 1-6). |
-| **Language** | **Python 3.9+** | Core logic for the simulator, random anomaly generation, and Cloud Run function code. |
+| **Language** | **Python 3.11** | Core logic for the simulator, random anomaly generation, and Cloud Run function code. |
 | **Visualization** | **Looker Studio** | Interactive dashboards for Operation Monitoring, Revenue Forecasting, and Data Quality Analysis. |
 | **Alerting** | **Discord Webhook** | Real-time notification channel for critical events (`RUSH HOUR`, `STORM`) and data anomalies (`MISSING DATA`). |
 
