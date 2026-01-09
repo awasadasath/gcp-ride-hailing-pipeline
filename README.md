@@ -9,6 +9,27 @@
 ![Discord](https://img.shields.io/badge/Discord-Alerts-5865F2?style=for-the-badge&logo=discord&logoColor=white)
 ![Looker](https://img.shields.io/badge/Looker-BI_Dashboard-F9AB00?style=for-the-badge&logo=google-cloud&logoColor=white)
 
+<div align="center">
+  <h3>🏙️ Real-time Operation Command Center</h3>
+  <img src="images/dashboard_ops.gif" alt="Real-time Ops Dashboard" width="100%">
+  <br><br>
+
+  <table align="center" style="border: none;">
+    <tr>
+      <td align="center" width="50%">
+        <h3>🤖 AI Command Center</h3>
+        <img src="images/dashboard_ai.gif" alt="AI Analytics Dashboard" width="100%">
+      </td>
+      <td align="center" width="50%">
+        <h3>📡 Live Feed & DQ Center</h3>
+        <img src="images/dashboard_feed.gif" alt="Data Quality Feed" width="100%">
+      </td>
+    </tr>
+  </table>
+  <em>🎥 Live Demo: End-to-End simulation replay showing Rush Hour surges, AI pricing, and Chaos Engineering events.</em>
+</div>
+<br>
+
 ## 📖 1. Overview
 
 This project demonstrates an **End-to-End Real-time Data Platform** by transforming the static **Uber & Lyft Kaggle Dataset (Boston, MA)** into a dynamic, streaming event source.
