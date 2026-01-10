@@ -301,7 +301,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 ### 🔮 Model 1: Fare Price Prediction (XGBoost)
 * **Algorithm:** `BOOSTED_TREE_REGRESSOR` (XGBoost).
 * **Features:** `distance`, `surge_multiplier`, `cab_type`, `name` (Car Class), `temperature`, `precipIntensity`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
-* **Performance:** **MAE: 1.17** | **MAPE: 6.78%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
+* **Performance:** **MAE: 1.04** | **MAPE: 5.96%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
 
 ### 📍 Model 2: Geospatial Clustering (K-Means)
 * **Objective:** Dynamically segment Boston neighborhoods into 6 operational zones (`cluster_id`) based on demand density.
