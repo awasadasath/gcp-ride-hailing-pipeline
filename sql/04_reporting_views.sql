@@ -52,8 +52,6 @@ predictions AS (
         -- 2. DQ Status (สำหรับหน้า Live Feed)
         CASE 
             WHEN d.distance IS NULL OR d.surge_multiplier IS NULL THEN 'Error: Missing Data 🚫'
-            WHEN d.distance <= 0 THEN 'Error: Zero Distance 🚫'
-            WHEN d.surge_multiplier >= 3.0 THEN 'Warning: Max Surge 📈'
             WHEN d.alert_trigger LIKE '%DQ%' THEN 'Warning: Data Quality ⚠️'
             ELSE 'Pass'
         END as dq_status,
