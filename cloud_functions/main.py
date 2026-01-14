@@ -128,7 +128,6 @@ def subscribe(cloud_event):
 
     except Exception as e:
         print(f"Critical Error: {e}")
-        # In production, we might want to re-raise this to trigger a retry
-        # raise e 
+        raise e 
     
     return "OK"
