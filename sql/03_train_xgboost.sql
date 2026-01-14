@@ -27,7 +27,7 @@ SELECT
 FROM
   `uber_data.realtime_rides` d
 JOIN
-  `uber_data.dim_locations_enriched` l ON d.source = l.location_name -- ✅ JOIN ตารางนี้แทน
+  `uber_data.dim_locations_enriched` l ON d.source = l.location_name
 WHERE
   d.timestamp < '2018-12-14';
 
@@ -63,3 +63,40 @@ SELECT * FROM ML.EVALUATE(MODEL `uber_data.price_prediction_model`,
 -- 5. Feature Importance
 CREATE OR REPLACE TABLE `uber_data.model_feature_importance` AS
 SELECT * FROM ML.FEATURE_IMPORTANCE(MODEL `uber_data.price_prediction_model`);
+
+-- 6. Test XGBoost Model
+WITH predictions AS (
+  SELECT
+    actual_price,
+    predicted_price,
+    ABS(actual_price - predicted_price) as absolute_error,
+    ABS((actual_price - predicted_price) / actual_price) as absolute_percentage_error
+  FROM
+    ML.PREDICT(MODEL `uber_data.price_prediction_model`,
+      (
+        SELECT
+          price as actual_price,
+          distance,
+          surge_multiplier,
+          cab_type,
+          name,
+          temperature,
+          precipIntensity,
+          l.cluster_id,
+          EXTRACT(HOUR FROM d.timestamp) as hour_of_day,
+          EXTRACT(DAYOFWEEK FROM d.timestamp) as day_of_week
+        FROM
+          `uber_data.realtime_rides` d
+        JOIN
+          `uber_data.dim_locations_enriched` l ON d.source = l.location_name
+        WHERE
+          d.timestamp >= '2018-12-14'
+      )
+    )
+)
+
+SELECT
+  COUNT(*) as total_test_rows,
+  ROUND(AVG(absolute_error), 2) as MAE,        -- Mean Absolute Error ($)
+  ROUND(AVG(absolute_percentage_error) * 100, 2) as -- Mean Absolute Percentage Error (%)
+FROM predictions;
