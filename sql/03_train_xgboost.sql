@@ -18,16 +18,18 @@ SELECT
   d.name, 
   d.temperature, 
   d.precipIntensity,
-  zones.centroid_id as cluster_id,
-  EXTRACT(HOUR FROM d.timestamp) as hour_of_day,
-  EXTRACT(DAYOFWEEK FROM d.timestamp) as day_of_week,
+  l.cluster_id,
+  
+  EXTRACT(HOUR FROM d.timestamp) as hour_of_day,       
+  EXTRACT(DAYOFWEEK FROM d.timestamp) as day_of_week,  
   d.timestamp 
-FROM `uber_data.realtime_rides` d
-JOIN `uber_data.dim_locations` l ON d.source = l.location_name
-LEFT JOIN ML.PREDICT(MODEL `uber_data.kmeans_zone_model`, 
-    (SELECT location_name, lat, lon FROM `uber_data.dim_locations`)) zones 
-    ON d.source = zones.location_name
-WHERE d.timestamp < '2018-12-14';
+
+FROM
+  `uber_data.realtime_rides` d
+JOIN
+  `uber_data.dim_locations_enriched` l ON d.source = l.location_name -- ✅ JOIN ตารางนี้แทน
+WHERE
+  d.timestamp < '2018-12-14';
 
 -- 3. Train XGBoost Model
 CREATE OR REPLACE MODEL `uber_data.price_prediction_model`
