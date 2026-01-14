@@ -4,7 +4,7 @@ SELECT
   name,
   ROUND(COVAR_POP(price, distance) / NULLIF(VAR_POP(distance),0), 2) as rate_per_mile,
   ROUND(AVG(price) - (COVAR_POP(price, distance) / NULLIF(VAR_POP(distance),0)) * AVG(distance), 2) as base_fare
-FROM `uber_data.realtime_rides` -- ตารางนี้คือตาราง CSV Kaggle ที่โหลดเข้ามาก่อนหน้านี้
+FROM `uber_data.realtime_rides`
 WHERE distance > 0 AND price > 0
 GROUP BY name;
 
