@@ -48,7 +48,7 @@ def clean_data():
     dropped_rows = initial_rows - len(df_clean)
     
     if dropped_rows > 0:
-        print(f"   -> Dropped {dropped_rows:,} rows with missing prices.")
+        print(f"Dropped {dropped_rows:,} rows with missing prices.")
 
     # 3. Save Output
     print(f"Saving cleaned data to '{OUTPUT_FILE}'...")
@@ -57,3 +57,6 @@ def clean_data():
     print("Preview of recent data (Sorted):")
     print(df_clean[['timestamp', 'price', 'source']].head(5))
     print(f"Done! Data has been sorted and cleaned successfully.")
+
+
+clean_data()
