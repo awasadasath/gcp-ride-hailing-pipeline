@@ -9,6 +9,27 @@
 ![Discord](https://img.shields.io/badge/Discord-Alerts-5865F2?style=for-the-badge&logo=discord&logoColor=white)
 ![Looker](https://img.shields.io/badge/Looker-BI_Dashboard-F9AB00?style=for-the-badge&logo=google-cloud&logoColor=white)
 
+<div align="center">
+  <h3>🏙️ Real-time Operation Command Center</h3>
+  <img src="images/dashboard_ops.gif" alt="Real-time Ops Dashboard" width="100%">
+  <br><br>
+
+  <table align="center" style="border: none;">
+    <tr>
+      <td align="center" width="50%">
+        <h3>🤖 AI Command Center</h3>
+        <img src="images/dashboard_ai.gif" alt="AI Analytics Dashboard" width="100%">
+      </td>
+      <td align="center" width="50%">
+        <h3>📡 Live Feed & DQ Center</h3>
+        <img src="images/dashboard_feed.gif" alt="Data Quality Feed" width="100%">
+      </td>
+    </tr>
+  </table>
+  <em>🎥 Live Demo: End-to-End simulation replay showing Rush Hour surges, AI pricing, and Chaos Engineering events.</em>
+</div>
+<br>
+
 ## 📖 1. Overview
 
 This project demonstrates an **End-to-End Real-time Data Platform** by transforming the static **Uber & Lyft Kaggle Dataset (Boston, MA)** into a dynamic, streaming event source.
@@ -72,7 +93,7 @@ This project leverages a fully serverless Google Cloud stack, orchestrating data
 | **Storage (Data Lake)** | **Cloud Storage (GCS)** | Stores the raw historical CSV dataset (`693k rows`) used to train the XGBoost & K-Means models. |
 | **Data Warehouse** | **BigQuery** | Petabyte-scale data warehouse for storing raw streams (`simulation_rides`) and 600K+ historical records. |
 | **Machine Learning** | **BigQuery ML** | **XGBoost** (Regression) for fare prediction (evaluated via MAE/MAPE) and **K-Means** for spatial clustering (Zones 1-6). |
-| **Language** | **Python 3.9+** | Core logic for the simulator, random anomaly generation, and Cloud Run function code. |
+| **Language** | **Python 3.11** | Core logic for the simulator, random anomaly generation, and Cloud Run function code. |
 | **Visualization** | **Looker Studio** | Interactive dashboards for Operation Monitoring, Revenue Forecasting, and Data Quality Analysis. |
 | **Alerting** | **Discord Webhook** | Real-time notification channel for critical events (`RUSH HOUR`, `STORM`) and data anomalies (`MISSING DATA`). |
 
@@ -205,6 +226,12 @@ The simulator intentionally "breaks" data to test the pipeline's **Resilience** 
 | **GPS Drift (Long)** | **Weighted Dist.** | Generated distance ≥ 6.0 miles. | Simulates GPS jumps or impossible speeds for inner-city routes. Triggers `DQ: LONG`. |
 | **Alert Tagging** | **Automatic** | Logic appends these issues into an `alert_trigger` string. | Example Payload: `"alert_trigger": "DQ: MISSING DATA, 🚗 RUSH HOUR"` |
 
+### 🖥️ Simulator Output Preview
+This provides a real-time view of the "Chaos Generator" in action. The console log confirms the injection of **Random Noise**, **Weather States** (Rain/Freeze), and **Anomalies** before the data is streamed to Pub/Sub.
+
+![Python Simulator Console Output](images/simulator_console.png)
+*(Figure: CLI output showing the stream of ride events with colored status icons and alert tags)*
+
 ---
 
 ## ☁️ 6. Event Streaming & Serverless Ingestion
@@ -274,7 +301,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 ### 🔮 Model 1: Fare Price Prediction (XGBoost)
 * **Algorithm:** `BOOSTED_TREE_REGRESSOR` (XGBoost).
 * **Features:** `distance`, `surge_multiplier`, `cab_type`, `name` (Car Class), `temperature`, `precipIntensity`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
-* **Performance:** **MAE: 1.17** | **MAPE: 6.78%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
+* **Performance:** **MAE: 1.04** | **MAPE: 5.96%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
 
 ### 📍 Model 2: Geospatial Clustering (K-Means)
 * **Objective:** Dynamically segment Boston neighborhoods into 6 operational zones (`cluster_id`) based on demand density.
@@ -351,38 +378,58 @@ The system categorizes events into 4 severity levels. Below are actual screensho
 ---
 ## 📊 9. Dashboard & Business Insights
 
-The final output of the pipeline is visualized in **Looker Studio**, offering three distinct views to serve different stakeholders (Operations, Data Scientists, and Data Engineers).
+The final output of the pipeline is visualized in **Looker Studio**, aggregating data from a **3-day continuous simulation run** to capture multiple rush hour cycles and weather transitions. It offers three distinct views to serve different stakeholders (Operations, Data Scientists, and Data Engineers).
 
-### 🏙️ A. Real-time Operation Center
-*Designed for Dispatchers & Business Analysts to monitor live city status.*
+### 🎛️ Interactive Global Controls
+To ensure a unified analytical experience, every dashboard view features a consistent **Top Navigation Bar** equipped with three global slicers, allowing users to slice and dice the data dynamically:
 
-![Operation Dashboard](images/dashboard_ops.jpg)
-
-* **Geospatial Clustering:** Visualizes the **6 Zones** generated by the K-Means model on the Boston map.
-* **Contextual Awareness:** Displays real-time **Weather** (e.g., `RAINING`) and **Alert Triggers** to explain demand spikes.
-* **Revenue Tracking:** Monitors Total Revenue and Average Surge Multiplier in real-time.
+* **📅 Date Selector:** Enables temporal analysis (e.g., focusing on a specific "Rush Hour" window or a full 3-day trend).
+* **🚘 Car Tier Group:** Filters data by service level (e.g., drilling down into `Super Luxury` performance vs. `Standard Ride` volume).
+* **📍 Source Location:** Isolates specific neighborhoods (e.g., "Show me only trips starting in `Financial District`") to analyze localized demand.
 
 ---
 
-### 🤖 B. AI Performance Monitor
-*Designed for Data Scientists to evaluate model accuracy.*
+### 🏙️ A. Real-time Operation Command Center
+*Designed for Dispatchers & Business Analysts to monitor live city status.*
 
-![AI Dashboard](images/dashboard_ai.jpg)
+![Operation Dashboard](images/dashboard_ops.png)
 
-* **Model Accuracy:** Tracks **MAE (1.17)** and **MAPE (6.78%)**, proving the XGBoost model's reliability in predicting fares.
-* **Actual vs. Predicted:** The scatter plot visually confirms the correlation between the ground truth and model predictions.
-* **Feature Importance:** Highlights that `distance` and `surge_multiplier` are the strongest drivers of price, validated by the bar chart.
+* **🚦 Contextual Awareness Widgets:** Top-left cards provide instant situational awareness, displaying the **Real-time Weather State** (e.g., `☀️ CLEAR`, `🌧️ RAINING`) and the active **Alert Trigger** (e.g., `🔥 HOT ZONE`) driving current demand.
+* **📍 Geospatial Clustering:** The central map visualizes the **6 Operational Zones** generated by the K-Means model, using bubble sizes to represent **Total Revenue** generated across Boston neighborhoods.
+* **💰 Revenue & Demand Analytics:**
+    * **KPI Cards:** Track **Total Revenue** (Gross Bookings), **Avg Surge Multiplier**, and **Active Rides** in real-time.
+    * **Source Distribution (Bar Chart):** Validates the simulation logic where high-tier business districts (e.g., **Financial District**, **Back Bay**) generate significantly higher revenue compared to residential areas (**North End**).
+* **📈 Dynamic Pricing Trends:** A time-series line chart tracks the **Surge Multiplier** fluctuations, visualizing the impact of "Rush Hour" and "Noise" injection on pricing stability.
+* **🚨 Live Alert Feed:** The "Last 5 Alert Triggers" table provides a granular log of system events, capturing both business drivers (`HOT ZONE`) and injected data quality anomalies (`🚫 DQ: MISSING DATA`) for immediate review.
+
+---
+
+### 🤖 B. AI Command Center
+*Designed for Data Scientists and ML Engineers to audit model performance.*
+
+![AI Dashboard](images/dashboard_ai.png)
+
+* **🏆 High-Precision Model Metrics:** The dashboard highlights a **Mean Absolute Error (MAE) of $1.04** and a **MAPE of 5.96%**, proving the XGBoost model's reliability in predicting fares dynamically across the 3-day simulation.
+* **📉 Actual vs. Predicted Validation:**
+    * **Time-Series Tracking (Top-Right):** Demonstrates how closely the `Predicted Price` (Light Blue) tracks the `Actual Price` (Dark Blue), capturing sudden spikes during "High Surge" events without significant lag.
+    * **Parity Plot (Middle-Right):** The tight clustering along the diagonal line confirms a strong correlation between ground truth and inference across all price ranges.
+* **🧠 Model Explainability (Feature Importance):** The central bar chart unboxes the model's logic, revealing that **Distance** and **Surge Multiplier** are the dominant drivers of price, validating the business logic.
+* **🚗 Multi-Tier Segmentation:** Scatter plots are color-coded by **Car Tier Group** (e.g., `Super Luxury` vs `Regular XL`), showing that the model correctly learns the pricing hierarchy—separating luxury rides (Blue dots) from standard rides (Orange dots).
+* **🔍 Residual Analysis:** The **Prediction Error** plot (Bottom-Right) shows residuals centered around zero, indicating an unbiased model, with occasional outliers corresponding to injected "Data Quality" anomalies.
 
 ---
 
 ### 📡 C. Live Feed & Data Quality Center
-*Designed for Data Engineers to monitor pipeline health and chaos experiments.*
+*Designed for Data Engineers to monitor pipeline health and validate chaos experiments.*
 
-![Live Feed Dashboard](images/dashboard_feed.jpg)
+![Live Feed Dashboard](images/dashboard_feed.png)
 
-* **Anomaly Detection:** Instantly flags "Missing Data" or "GPS Errors" injected by the Chaos Simulator (seen in the Pie Chart & Logs).
-* **Event Logging:** A granular table showing exactly when `RUSH HOUR` or `STORM STARTED` events were triggered.
-* **Surge Trend:** Time-series graph showing how surge multipliers fluctuate throughout the simulation window.
+* **🛡️ Data Quality Monitoring (DQ):** The top-right donut chart acts as a robust health check, visualizing that while **97% of records pass** validation (Blue), the system correctly captures and flags injected anomalies like **"Error: Missing Data"** (Cyan) and **"Warning: Data Quality"** (Pink).
+* **🧪 Chaos Engineering Validation:**
+    * **Row-Level Observability:** The granular data table provides definitive proof of the simulator's logic. For instance, the row tagged `🚫 DQ: MISSING...` explicitly shows `null` values for Surge, Distance, and Price, confirming that the pipeline handles bad data gracefully without crashing.
+    * **Event Logging:** The `alert_trigger` column serves as an audit trail, capturing specific simulation states like `🔥 HOT ZONE` or `✅ Normal` in real-time.
+* **📊 Service Level Pricing Hierarchy:** The bar chart (Top-Middle) validates the pricing logic across standardized tiers, clearly showing that **Super Luxury** rides (`Black SUV`) consistently generate the highest revenue per trip, while **Standard Rides** (`WAV`, `Lyft`) remain the most affordable.
+* **📈 Surge Heartbeat:** The raw surge multiplier line chart (Top-Left) visualizes the system's "pulse," showing the high-frequency jitter and trend lines generated by the simulation engine over a 24-hour window.
 
 ---
 
@@ -395,18 +442,21 @@ The project follows a modular structure, separating the simulation logic, ingest
 │   ├── main.py                 # Core Logic: Pub/Sub Trigger -> BigQuery
 │   └── requirements.txt        # Dependencies (google-cloud-bigquery, etc.)
 │
-├── simulator/                  # Python Logic (The "Chaos" Generator)
-│   ├── Dockerfile              # Container setup for reproducibility
-│   ├── main.py                 # Simulation Script (State Machine, Chaos, Pub/Sub)
-│   └── requirements.txt        # Dependencies
+├── python/                  # Python Logic (The "Chaos" Generator)
+│   ├── uber_cleaning.py
+│   └── uber_simulator          # Simulation Script (State Machine, Chaos, Pub/Sub)
 │
 ├── sql/                        # BigQuery Scripts (ELT & ML)
 │   ├── 01_schema_ddl.sql       # Table definitions
 │   ├── 02_train_kmeans.sql     # K-Means Model Training
 │   ├── 03_train_xgboost.sql    # XGBoost Price Prediction Model
-│   └── 04_reporting_views.sql  # SQL Views for Looker Studio
+│   ├── 04_reporting_views.sql  # SQL Views for Looker Studio
+│   └── 99_utils.sql
 │
-└── images/                     # Dashboard screenshots & Diagrams
+├── images/                     # Dashboard screenshots & Diagrams
+├── Dockerfile                  # Container setup for reproducibility
+└──requirements.txt             # Dependencies
+
 ```
 ---
 
