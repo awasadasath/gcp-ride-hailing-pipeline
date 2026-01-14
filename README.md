@@ -341,7 +341,9 @@ While the dashboard monitors the *simulation* health, the true predictive power 
 
 **Validation Query Result:**
 ![Model Evaluation Proof](images/bq_evaluation_result.png)
+
 *(Figure: BigQuery output verifying the evaluation on the 20% hold-out test set)*
+
 ---
 
 ## 🛡️ 8. Data Quality & Alerting Strategy
