@@ -1,5 +1,4 @@
 import pandas as pd
-import sys
 
 # Configuration
 INPUT_FILE = 'rideshare_kaggle.csv'
@@ -20,7 +19,7 @@ def clean_data():
         print(f"Successfully loaded {len(df):,} rows.")
     except FileNotFoundError:
         print(f"Error: File '{INPUT_FILE}' not found.")
-        sys.exit(1)
+        return
 
     # Keep only necessary columns
     df_clean = df[REQUIRED_COLUMNS].copy()
