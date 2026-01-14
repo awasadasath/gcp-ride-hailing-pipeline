@@ -15,7 +15,6 @@ DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL', '')
 client = bigquery.Client()
 
 def send_discord_alert(alerts, row):
-    # ถ้า URL เป็นค่าว่าง (หรือ Placeholder) ให้ข้ามไปเลย ไม่ต้องยิง
     if not DISCORD_WEBHOOK_URL or "YOUR_WEBHOOK" in DISCORD_WEBHOOK_URL:
         print("Skipping Discord Alert: Webhook URL is missing or placeholder.")
         return
