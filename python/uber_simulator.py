@@ -140,26 +140,26 @@ try:
 
         # BAD DATA FOR TEST DLQ
         is_bad = False
-        if random.random() < 0.005: # 0.5% Chance to inject Poison
+        if random.random() < 0.005: # 0.5% Chance to inject Bad Data
             is_bad = True
             bad_payload = "☠️ THIS_IS_NOT_JSON_DATA ☠️".encode("utf-8")
             try:
                 publisher.publish(topic_path, bad_payload)
             except Exception as e:
-                print(f"⚠️ Pub/Sub Error (Poison): {e}")
+                print(f"Pub/Sub Error: {e}")
         else:
             # NORMAL CASE
             try:
                 publisher.publish(topic_path, json.dumps(data).encode("utf-8"))
             except Exception as e:
-                print(f"⚠️ Pub/Sub Error: {e}")
+                print(f"Pub/Sub Error: {e}")
 
         # 7. LOG OUTPUT
         log_time = current_sim_time.strftime('%Y-%m-%d %H:%M:%S')
         
         # ถ้าเป็น bad ให้โชว์ LOG พิเศษและข้ามการ Print ปกติ
         if is_bad:
-            print(f"{log_time:<{W_TIME}} | ☠️  SENT BAD JSON DATA (TESTING DLQ...) ☠️")
+            print(f"{log_time:<{W_TIME}} | ☠️  SENT BAD JSON DATA (TESTING DLQ) ☠️")
             time.sleep(0.2)
             continue
 
