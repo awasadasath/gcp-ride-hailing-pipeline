@@ -301,7 +301,7 @@ I implemented specific SQL logic to ensure the model learns realistic patterns:
 ### 🔮 Model 1: Fare Price Prediction (XGBoost)
 * **Algorithm:** `BOOSTED_TREE_REGRESSOR` (XGBoost).
 * **Features:** `distance`, `surge_multiplier`, `cab_type`, `name` (Car Class), `temperature`, `precipIntensity`, `cluster_id` (Zone), `hour_of_day`, `day_of_week`.
-* **Performance:** **MAE: 1.04** | **MAPE: 5.96%** (Evaluated directly on **Real-time Streaming Data** against the pricing formula).
+* **Performance:** **MAE: $1.17** | **MAPE: 8.53%** (Evaluated on a **strict 20% hold-out test set** to ensure generalization on unseen future data).
 
 ### 📍 Model 2: Geospatial Clustering (K-Means)
 * **Objective:** Dynamically segment Boston neighborhoods into 6 operational zones (`cluster_id`) based on demand density.
@@ -329,6 +329,21 @@ FROM
 WHERE
   timestamp < '2018-12-14';
 ```
+
+### 📉 Model Evaluation (Held-Out Test Set)
+
+While the dashboard monitors the *simulation* health, the true predictive power of the model was validated using a **Strict Hold-Out Test Set** (Historical data after `2018-12-14`). This ensures no data leakage and proves the model works on unseen real-world data.
+
+| Metric | Value | Interpretation |
+| :--- | :--- | :--- |
+| **MAE** | **$1.17** | On average, the prediction deviates by **$1.17** from the actual fare. |
+| **MAPE** | **8.53%** | The relative error is approx. **8.53%**, showing high accuracy for a pricing model. |
+
+**Validation Query Result:**
+![Model Evaluation Proof](images/bq_evaluation_result.png)
+
+*(Figure: BigQuery output verifying the evaluation on the 20% hold-out test set)*
+
 ---
 
 ## 🛡️ 8. Data Quality & Alerting Strategy
